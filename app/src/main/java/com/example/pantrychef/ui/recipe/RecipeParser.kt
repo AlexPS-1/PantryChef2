@@ -34,6 +34,11 @@ object RecipeParser {
         explicitNulls = false
     }
 
+    private val fencedJsonRegex = Regex(
+        pattern = "```(?:json)?\\s*(\\{[\\s\\S]*?\\})\\s*```",
+        options = setOf(RegexOption.IGNORE_CASE)
+    )
+
     private val pantryAliases: Map<String, Set<String>> = mapOf(
         "bell pepper" to setOf("capsicum", "pepper"),
         "scallion" to setOf("spring onion", "green onion"),
@@ -78,7 +83,7 @@ object RecipeParser {
                 val noteSuffix = ingredient.note
                     .trim()
                     .takeIf { it.isNotBlank() }
-                    ?.let { " (${it})" }
+                    ?.let { " ($it)" }
                     .orEmpty()
 
                 appendLine("- $amountText ${ingredient.unit} ${ingredient.name}$noteSuffix")
@@ -134,12 +139,13 @@ object RecipeParser {
     }
 
     private fun extractJsonPayload(text: String): String? {
-        val fenced = Regex(
-            pattern = "```(?:json)?\\s*(\\{.*})\\s*```",
-            options = setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
-        ).find(text)?.groupValues?.getOrNull(1)
+        val fenced = fencedJsonRegex
+            .find(text)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.trim()
 
-        if (!fenced.isNullOrBlank()) return fenced.trim()
+        if (!fenced.isNullOrBlank()) return fenced
 
         val start = text.indexOf('{')
         val end = text.lastIndexOf('}')
@@ -282,7 +288,8 @@ object RecipeParser {
     private fun aliasesMatch(ingredient: String, pantry: String): Boolean {
         val ingredientSet = pantryAliases[ingredient].orEmpty() + ingredient
         val pantrySet = pantryAliases[pantry].orEmpty() + pantry
-        return ingredientSet.any { it == pantry } || pantrySet.any { it == ingredient } ||
+        return ingredientSet.any { it == pantry } ||
+                pantrySet.any { it == ingredient } ||
                 ingredientSet.intersect(pantrySet).isNotEmpty()
     }
 }

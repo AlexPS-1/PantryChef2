@@ -105,10 +105,14 @@ class RecipeGenerationViewModel @Inject constructor(
                 return@launch
             }
 
-            val parsed = RecipeParser.fromModelText(response)
+            val parsed = runCatching {
+                RecipeParser.fromModelText(response)
+            }.getOrNull()
+
             if (parsed == null) {
                 _uiState.value = RecipeUiState(
-                    errorMessage = "PantryChef returned a format I couldn't read. Try again."
+                    errorMessage = "PantryChef returned a format I couldn't read. Try again.",
+                    rawText = response
                 )
                 return@launch
             }
@@ -143,7 +147,9 @@ class RecipeGenerationViewModel @Inject constructor(
     fun loadSavedRecipe(id: String) {
         viewModelScope.launch {
             val payload = recipesRepository.loadRecipe(id)
-            val recipe = payload?.let { RecipeParser.fromSavedText(it.text) }
+            val recipe = payload?.let {
+                runCatching { RecipeParser.fromSavedText(it.text) }.getOrNull()
+            }
 
             if (payload == null || recipe == null) {
                 _uiState.value = RecipeUiState(
