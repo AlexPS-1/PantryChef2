@@ -1,71 +1,131 @@
 package com.example.pantrychef.ui.recipe
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.pantrychef.ui.pantry.PantryViewModel
+import com.example.pantrychef.core.RecipesRepository
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SavedRecipesScreen(
-    viewModel: PantryViewModel = hiltViewModel(),
-    onOpenRecipe: (String) -> Unit = {},
-    onBack: () -> Unit = {}
+    viewModel: RecipeGenerationViewModel,
+    onBack: () -> Unit,
+    onOpenRecipe: () -> Unit
 ) {
-    val recipes by viewModel.savedRecipes.collectAsState()
-    LaunchedEffect(Unit) { viewModel.refreshSavedRecipes() }
+    val savedRecipes by viewModel.savedRecipes.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Saved recipes") },
                 navigationIcon = {
-                    TextButton(onClick = onBack) { Text("Back") }
+                    TextButton(onClick = onBack) {
+                        Text("Back")
+                    }
                 }
             )
+        },
+        bottomBar = {
+            BottomAppBar(
+                modifier = Modifier.navigationBarsPadding()
+            ) {}
         }
-    ) { inner ->
-        if (recipes.isEmpty()) {
-            Box(
+    ) { innerPadding ->
+        if (savedRecipes.isEmpty()) {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(inner),
-                contentAlignment = androidx.compose.ui.Alignment.Center
+                    .padding(innerPadding)
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Center
             ) {
-                Text("No saved recipes yet.")
+                Text(
+                    text = "No saved recipes yet.",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Text(
+                    text = "Generate a recipe and tap Save to keep it here.",
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(inner)
-                    .padding(16.dp),
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(recipes, key = { it.id }) { r ->
-                    ElevatedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenRecipe(r.id) }
-                    ) {
-                        Column(
-                            Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(r.title, style = MaterialTheme.typography.titleMedium)
-                            Text(r.dateString, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                TextButton(onClick = { onOpenRecipe(r.id) }) { Text("Open") }
-                                TextButton(onClick = { viewModel.deleteSavedRecipe(r.id) }) { Text("Delete") }
-                            }
-                        }
-                    }
+                items(savedRecipes, key = { it.id }) { recipe ->
+                    SavedRecipeRow(
+                        recipe = recipe,
+                        onOpen = {
+                            viewModel.loadSavedRecipe(recipe.id)
+                            onOpenRecipe()
+                        },
+                        onDelete = { viewModel.deleteSavedRecipe(recipe.id) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavedRecipeRow(
+    recipe: RecipesRepository.SavedRecipe,
+    onOpen: () -> Unit,
+    onDelete: () -> Unit
+) {
+    ElevatedCard(shape = MaterialTheme.shapes.extraLarge) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ListItem(
+                headlineContent = {
+                    Text(recipe.title)
+                },
+                supportingContent = {
+                    Text("Saved ${recipe.dateString}")
+                }
+            )
+
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FilledTonalButton(
+                    onClick = onOpen,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Open")
+                }
+
+                TextButton(
+                    onClick = onDelete,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Delete")
                 }
             }
         }

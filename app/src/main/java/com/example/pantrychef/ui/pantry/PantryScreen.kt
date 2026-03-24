@@ -1,11 +1,42 @@
-// Pantry screen showing items, with edit and delete actions and recipe generation entry.
 package com.example.pantrychef.ui.pantry
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -25,7 +56,6 @@ fun PantryScreen(
 ) {
     val pantryItems by viewModel.items.collectAsState()
     val canGenerate = pantryItems.isNotEmpty()
-
     var editing by remember { mutableStateOf<PantryItem?>(null) }
 
     Scaffold(
@@ -33,17 +63,28 @@ fun PantryScreen(
             TopAppBar(
                 title = { Text("PantryChef") },
                 actions = {
-                    TextButton(onClick = onOpenSaved) { Text("Saved") }
+                    IconButton(onClick = onOpenScanPantry) {
+                        Icon(
+                            imageVector = Icons.Filled.CameraAlt,
+                            contentDescription = "Scan pantry"
+                        )
+                    }
+                    TextButton(onClick = onOpenSaved) {
+                        Text("Saved")
+                    }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onOpenAddItem) { Text("+") }
+            FloatingActionButton(onClick = onOpenAddItem) {
+                Text("+")
+            }
         },
         floatingActionButtonPosition = FabPosition.End,
         bottomBar = {
-            BottomAppBar {
-                Spacer(Modifier.weight(1f))
+            BottomAppBar(
+                modifier = Modifier.navigationBarsPadding()
+            ) {
                 Button(
                     onClick = onOpenRecipeCustomization,
                     enabled = canGenerate,
@@ -51,33 +92,42 @@ fun PantryScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .height(48.dp)
-                ) { Text("Generate Recipe") }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.RestaurantMenu,
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text("Generate Recipe")
+                }
             }
         }
     ) { innerPadding ->
         PantryContent(
             items = pantryItems,
-            onDelete = { id -> viewModel.deleteItem(id) },
-            onEdit = { item -> editing = item },
+            onDelete = viewModel::deleteItem,
+            onEdit = { editing = it },
+            onOpenAddItem = onOpenAddItem,
+            onOpenScanPantry = onOpenScanPantry,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         )
     }
 
-    val toEdit = editing
-    if (toEdit != null) {
+    val itemToEdit = editing
+    if (itemToEdit != null) {
         EditItemSheet(
             title = "Edit Pantry Item",
-            initialName = toEdit.name,
-            initialQuantity = toEdit.quantity,
-            initialUnit = toEdit.unit,
+            initialName = itemToEdit.name,
+            initialQuantity = itemToEdit.quantity,
+            initialUnit = itemToEdit.unit,
             onDismiss = { editing = null },
-            onSave = { newName, newQty, newUnit ->
+            onSave = { newName, newQuantity, newUnit ->
                 viewModel.updateItem(
-                    id = toEdit.id,
+                    id = itemToEdit.id,
                     name = newName,
-                    quantity = newQty,
+                    quantity = newQuantity,
                     unit = newUnit
                 )
                 editing = null
@@ -91,16 +141,43 @@ private fun PantryContent(
     items: List<PantryItem>,
     onDelete: (Long) -> Unit,
     onEdit: (PantryItem) -> Unit,
+    onOpenAddItem: () -> Unit,
+    onOpenScanPantry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val bottomBarHeight = 80.dp
+    val bottomBarHeight = 84.dp
 
     if (items.isEmpty()) {
-        Box(modifier, contentAlignment = Alignment.Center) {
-            Text(
-                text = "Your pantry is feeling lonely.\nTap + to add your first item!",
-                style = MaterialTheme.typography.bodyLarge
-            )
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center
+        ) {
+            ElevatedCard(
+                shape = MaterialTheme.shapes.extraLarge,
+                modifier = Modifier.padding(20.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Your pantry is feeling lonely.",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = "Add a few ingredients or scan your shelves to get started.",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(onClick = onOpenScanPantry) {
+                            Text("Scan pantry")
+                        }
+                        Button(onClick = onOpenAddItem) {
+                            Text("Add item")
+                        }
+                    }
+                }
+            }
         }
         return
     }
@@ -108,12 +185,19 @@ private fun PantryContent(
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp + bottomBarHeight
+            start = 16.dp,
+            end = 16.dp,
+            top = 12.dp,
+            bottom = 12.dp + bottomBarHeight
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         items(items, key = { it.id }) { item ->
-            PantryRow(item = item, onDelete = onDelete, onEdit = onEdit)
+            PantryRow(
+                item = item,
+                onDelete = onDelete,
+                onEdit = onEdit
+            )
         }
     }
 }
@@ -141,17 +225,29 @@ private fun PantryRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                val qty = if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else item.quantity.toString()
                 Text(
-                    text = "$qty ${item.unit}",
+                    text = "${formatQuantity(item.quantity)} ${item.unit}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { onEdit(item) }) { Text("Edit") }
-                FilledTonalButton(onClick = { onDelete(item.id) }) { Text("Delete") }
+                OutlinedButton(onClick = { onEdit(item) }) {
+                    Text("Edit")
+                }
+                FilledTonalButton(onClick = { onDelete(item.id) }) {
+                    Text("Delete")
+                }
             }
         }
+    }
+}
+
+private fun formatQuantity(quantity: Double): String {
+    return if (quantity % 1.0 == 0.0) {
+        quantity.toInt().toString()
+    } else {
+        quantity.toString()
     }
 }

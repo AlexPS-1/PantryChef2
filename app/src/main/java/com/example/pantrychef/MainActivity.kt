@@ -1,4 +1,3 @@
-// Main activity hosting PantryChef composables and simple in-app navigation.
 package com.example.pantrychef
 
 import android.os.Bundle
@@ -7,95 +6,144 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.example.pantrychef.ui.add.AddItemSheet
 import com.example.pantrychef.ui.pantry.PantryScreen
 import com.example.pantrychef.ui.pantry.PantryViewModel
+import com.example.pantrychef.ui.recipe.RecipeGenerationViewModel
 import com.example.pantrychef.ui.recipe.RecipeResultScreen
 import com.example.pantrychef.ui.recipe.RecipeScreen
 import com.example.pantrychef.ui.recipe.SavedRecipesScreen
 import com.example.pantrychef.ui.scan.ScanPantryScreen
+import com.example.pantrychef.ui.theme.PantryChefTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
-            Surface(color = MaterialTheme.colorScheme.background) {
-                PantryChefRoot()
+            PantryChefTheme {
+                Surface(color = MaterialTheme.colorScheme.background) {
+                    PantryChefRoot()
+                }
             }
         }
     }
 }
 
+private object Destinations {
+    const val Pantry = "pantry"
+    const val RecipePreferences = "recipe_preferences"
+    const val RecipeResult = "recipe_result"
+    const val SavedRecipes = "saved_recipes"
+    const val Scan = "scan"
+}
+
 @Composable
 private fun PantryChefRoot(
-    pantryViewModel: PantryViewModel = hiltViewModel()
+    pantryViewModel: PantryViewModel = hiltViewModel(),
+    recipeViewModel: RecipeGenerationViewModel = hiltViewModel()
 ) {
-    var route by remember { mutableStateOf("pantry") }
-    var showAdd by remember { mutableStateOf(false) }
+    val navController = rememberNavController()
+    var showAddSheet by remember { mutableStateOf(false) }
 
-    when (route) {
-        "pantry" -> {
+    NavHost(
+        navController = navController,
+        startDestination = Destinations.Pantry
+    ) {
+        composable(Destinations.Pantry) {
             PantryScreen(
                 viewModel = pantryViewModel,
-                onOpenAddItem = { showAdd = true },
-                onOpenRecipeCustomization = { route = "recipe_prefs" },
-                onOpenSaved = { route = "saved" }
+                onOpenAddItem = { showAddSheet = true },
+                onOpenRecipeCustomization = { navController.navigate(Destinations.RecipePreferences) },
+                onOpenSaved = { navController.navigate(Destinations.SavedRecipes) },
+                onOpenScanPantry = { navController.navigate(Destinations.Scan) }
             )
         }
-        "recipe_prefs" -> {
+
+        composable(Destinations.RecipePreferences) {
             RecipeScreen(
-                viewModel = pantryViewModel,
-                onBack = { route = "pantry" },
-                onOpenResult = { route = "recipe_result" }
+                viewModel = recipeViewModel,
+                onBack = { navController.popBackStack() },
+                onOpenResult = {
+                    navController.navigateSingleTopTo(Destinations.RecipeResult)
+                }
             )
         }
-        "recipe_result" -> {
+
+        composable(Destinations.RecipeResult) {
             RecipeResultScreen(
-                viewModel = pantryViewModel,
-                onBack = { route = "pantry" }
+                viewModel = recipeViewModel,
+                onBack = { navController.popBackStack() },
+                onOpenPreferences = {
+                    navController.navigateSingleTopTo(Destinations.RecipePreferences)
+                }
             )
         }
-        "saved" -> {
+
+        composable(Destinations.SavedRecipes) {
             SavedRecipesScreen(
-                viewModel = pantryViewModel,
-                onBack = { route = "pantry" },
-                onOpenRecipe = { route = "recipe_result" }
+                viewModel = recipeViewModel,
+                onBack = { navController.popBackStack() },
+                onOpenRecipe = {
+                    navController.navigateSingleTopTo(Destinations.RecipeResult)
+                }
             )
         }
-        "scan" -> {
+
+        composable(Destinations.Scan) {
             ScanPantryScreen(
-                onBack = { route = "pantry" },
+                onBack = { navController.popBackStack() },
                 onAddItems = { items ->
-                    items.forEach { it ->
+                    items.forEach { detected ->
                         pantryViewModel.insertItem(
-                            name = it.name,
-                            quantity = it.count.toDouble(),
-                            unit = it.unit
+                            name = detected.name,
+                            quantity = detected.count.toDouble(),
+                            unit = detected.unit
                         )
                     }
-                    route = "pantry"
+                    navController.popBackStack(Destinations.Pantry, inclusive = false)
                 }
             )
         }
     }
 
-    if (showAdd) {
+    if (showAddSheet) {
         AddItemSheet(
-            onDismiss = { showAdd = false },
-            onAdd = { name, qty, unit ->
-                pantryViewModel.insertItem(name, qty, unit)
+            onDismiss = { showAddSheet = false },
+            onAdd = { name, quantity, unit ->
+                pantryViewModel.insertItem(
+                    name = name,
+                    quantity = quantity,
+                    unit = unit
+                )
+                showAddSheet = false
             },
             onOpenScan = {
-                showAdd = false
-                route = "scan"
+                showAddSheet = false
+                navController.navigateSingleTopTo(Destinations.Scan)
             }
         )
+    }
+}
+
+private fun NavHostController.navigateSingleTopTo(route: String) {
+    navigate(route) {
+        launchSingleTop = true
     }
 }

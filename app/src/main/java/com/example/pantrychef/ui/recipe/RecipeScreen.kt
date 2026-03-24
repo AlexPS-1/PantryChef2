@@ -1,27 +1,51 @@
-// Preference screen for configuring recipe generation options and launching the result view.
 package com.example.pantrychef.ui.recipe
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.pantrychef.core.RecipePreferences
-import com.example.pantrychef.ui.pantry.PantryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun RecipeScreen(
-    viewModel: PantryViewModel = hiltViewModel(),
+    viewModel: RecipeGenerationViewModel,
     onBack: () -> Unit,
     onOpenResult: () -> Unit
 ) {
-    val scroll = rememberScrollState()
+    val pantryItems by viewModel.pantryItems.collectAsState()
+    val scrollState = rememberScrollState()
 
     val mealTime = remember { mutableStateListOf<String>() }
     val styleSpeed = remember { mutableStateListOf<String>() }
@@ -37,207 +61,254 @@ fun RecipeScreen(
         "Italian Nonna",
         "Science-y Food Nerd",
         "Street-food Storyteller",
-        "Nordic Minimalist",
-        "BBQ Pitmaster",
-        "Kitchen Nightmare (Brutally Honest)",
-        "Pirate",
-        "Cute for Kids"
+        "Nordic Minimalist"
     )
-    var selectedVoice by remember { mutableStateOf("Playful Classic") }
 
+    var selectedVoice by remember { mutableStateOf("Playful Classic") }
     var spicyLanguage by remember { mutableStateOf(false) }
     var childFriendly by remember { mutableStateOf(false) }
-
-    var mustsText by remember { mutableStateOf("") }
+    var mustIncludeText by remember { mutableStateOf("") }
     var allowAdditions by remember { mutableStateOf(true) }
-    var additionsCount by remember { mutableStateOf(2f) }
+    var additionsCount by remember { mutableFloatStateOf(2f) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Recipe preferences") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } }
+                navigationIcon = {
+                    TextButton(onClick = onBack) {
+                        Text("Back")
+                    }
+                }
             )
         },
         bottomBar = {
-            BottomAppBar {
-                Spacer(Modifier.weight(1f))
+            BottomAppBar(
+                modifier = Modifier.navigationBarsPadding()
+            ) {
                 Button(
                     onClick = {
-                        val prefs = RecipePreferences(
+                        val preferences = RecipePreferences(
                             mealTime = mealTime.toList(),
                             styleSpeed = styleSpeed.toList(),
                             diet = diet.toList(),
                             cuisine = cuisine.toList(),
                             mood = mood.toList(),
-                            mustInclude = mustsText.split(",").map { it.trim() }.filter { it.isNotBlank() },
+                            mustInclude = mustIncludeText
+                                .split(",")
+                                .map { it.trim() }
+                                .filter { it.isNotBlank() },
                             maxNewAdditions = if (allowAdditions) additionsCount.toInt() else 0,
                             voice = selectedVoice,
                             spicyLanguage = spicyLanguage,
                             childFriendly = childFriendly
                         )
-                        viewModel.setRecipePreferences(prefs)
-                        viewModel.generateRecipes()
+                        viewModel.generateRecipe(preferences)
                         onOpenResult()
                     },
+                    enabled = pantryItems.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .height(52.dp)
-                ) { Text("Generate Recipe") }
+                ) {
+                    Text("Generate recipe")
+                }
             }
         }
-    ) { inner ->
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(inner)
+                .padding(innerPadding)
                 .imePadding()
-                .navigationBarsPadding()
-                .verticalScroll(scroll)
+                .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             ElevatedCard(shape = MaterialTheme.shapes.extraLarge) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(
-                        text = "Pick a few quick options below. You can also set must-haves and how many new ingredients are allowed.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Pantry snapshot",
+                        style = MaterialTheme.typography.titleMedium
                     )
-                    Text(
-                        text = "Recipes are generated by AI. We can’t guarantee accuracy, safety, or outcomes. Please use your judgment and check allergens, doneness, and food safety.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (pantryItems.isEmpty()) {
+                        Text("No pantry items yet.")
+                    } else {
+                        Text(
+                            pantryItems.joinToString { "${it.name} (${it.quantity} ${it.unit})" },
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
             }
 
-            FilterChipSection("Meal time", listOf("Breakfast","Brunch","Lunch","Dinner","Late-night snack"), mealTime)
-            FilterChipSection("Style & speed", listOf("15-minute","30-minute","One-pot","Sheet-pan","Air fryer","No oven"), styleSpeed)
-            FilterChipSection("Diet", listOf("Vegetarian","Vegan","Pescatarian","High-protein","Low-carb","Gluten-free","Dairy-free"), diet)
-            FilterChipSection("Cuisine", listOf("Italian","Mexican","Indian","Thai","Chinese","Japanese","Mediterranean","French","American","Middle Eastern"), cuisine)
-            FilterChipSection("Mood", listOf("Comfort food","Light & fresh","Spicy","Meal prep"), mood)
+            PreferenceGroup(
+                title = "Meal time",
+                options = listOf("Breakfast", "Lunch", "Dinner", "Snack"),
+                selected = mealTime
+            )
 
-            ElevatedCard {
-                Column(Modifier.padding(16.dp)) {
-                    Text("Must include", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(8.dp))
+            PreferenceGroup(
+                title = "Style & speed",
+                options = listOf("Quick", "One-pan", "Comforting", "Fresh", "Meal prep"),
+                selected = styleSpeed
+            )
+
+            PreferenceGroup(
+                title = "Diet",
+                options = listOf("Vegetarian", "High-protein", "Low-carb", "Dairy-free"),
+                selected = diet
+            )
+
+            PreferenceGroup(
+                title = "Cuisine",
+                options = listOf("Italian", "Mediterranean", "Mexican", "Asian-inspired", "British"),
+                selected = cuisine
+            )
+
+            PreferenceGroup(
+                title = "Mood",
+                options = listOf("Cozy", "Light", "Bold", "Nostalgic", "Fancy-ish"),
+                selected = mood
+            )
+
+            ElevatedCard(shape = MaterialTheme.shapes.extraLarge) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Voice",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        voices.forEach { voice ->
+                            FilterChip(
+                                selected = selectedVoice == voice,
+                                onClick = { selectedVoice = voice },
+                                label = { Text(voice) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            ElevatedCard(shape = MaterialTheme.shapes.extraLarge) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Constraints",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
                     OutlinedTextField(
-                        value = mustsText,
-                        onValueChange = { mustsText = it },
-                        placeholder = { Text("e.g., tomato, garlic, basil") },
-                        singleLine = false,
-                        minLines = 2,
+                        value = mustIncludeText,
+                        onValueChange = { mustIncludeText = it },
+                        label = { Text("Must include ingredients (comma-separated)") },
                         modifier = Modifier.fillMaxWidth()
                     )
-                }
-            }
 
-            ElevatedCard {
-                Column(Modifier.padding(16.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Allow new additions", style = MaterialTheme.typography.titleMedium)
-                        Switch(checked = allowAdditions, onCheckedChange = { allowAdditions = it })
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    val enabled = allowAdditions
-                    CompositionLocalProvider(LocalContentColor provides (if (enabled) LocalContentColor.current else LocalContentColor.current.copy(alpha = 0.6f))) {
-                        Column {
-                            Text("Max extra ingredients: ${additionsCount.toInt()}")
-                            Slider(
-                                value = additionsCount,
-                                onValueChange = { additionsCount = it },
-                                valueRange = 0f..5f,
-                                steps = 4,
-                                enabled = enabled
-                            )
-                            Text("Salt, pepper, oil, and water don’t count.")
-                        }
-                    }
-                }
-            }
+                    HorizontalDivider()
 
-            ElevatedCard {
-                Column(Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Text("Child-friendly (picky eaters)", style = MaterialTheme.typography.titleMedium)
-                        Switch(checked = childFriendly, onCheckedChange = { childFriendly = it })
+                    ToggleRow(
+                        label = "Allow a few extra ingredients",
+                        checked = allowAdditions,
+                        onCheckedChange = { allowAdditions = it }
+                    )
+
+                    if (allowAdditions) {
+                        Text("Max new additions: ${additionsCount.toInt()}")
+                        Slider(
+                            value = additionsCount,
+                            onValueChange = { additionsCount = it },
+                            valueRange = 1f..6f,
+                            steps = 4
+                        )
                     }
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "Simpler flavors, mild heat, familiar swaps, and clear steps for kids to help.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                    HorizontalDivider()
+
+                    ToggleRow(
+                        label = "Keep language playful",
+                        checked = spicyLanguage,
+                        onCheckedChange = { spicyLanguage = it }
+                    )
+
+                    ToggleRow(
+                        label = "Child-friendly mode",
+                        checked = childFriendly,
+                        onCheckedChange = { childFriendly = it }
                     )
                 }
             }
 
-            ElevatedCard {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Voice", style = MaterialTheme.typography.titleMedium)
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        voices.forEach { label ->
-                            val isSelected = selectedVoice == label
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { selectedVoice = label },
-                                label = { Text(label) }
-                            )
-                        }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                    ) {
-                        Text("Spicy language (PG witty)", style = MaterialTheme.typography.bodyMedium)
-                        Switch(checked = spicyLanguage, onCheckedChange = { spicyLanguage = it })
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(88.dp))
+            Spacer(Modifier.height(12.dp))
         }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FilterChipSection(
+private fun PreferenceGroup(
     title: String,
-    chips: List<String>,
+    options: List<String>,
     selected: MutableList<String>
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+    ElevatedCard(shape = MaterialTheme.shapes.extraLarge) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            TextButton(onClick = { selected.clear() }) { Text("Clear") }
-        }
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            chips.forEach { label ->
-                val isSelected = label in selected
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { if (isSelected) selected.remove(label) else selected.add(label) },
-                    label = { Text(label) }
-                )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                options.forEach { option ->
+                    val isSelected = option in selected
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = {
+                            if (isSelected) {
+                                selected.remove(option)
+                            } else {
+                                selected.add(option)
+                            }
+                        },
+                        label = { Text(option) }
+                    )
+                }
             }
         }
-        HorizontalDivider()
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    androidx.compose.foundation.layout.Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, modifier = Modifier.weight(1f))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
     }
 }
