@@ -1,4 +1,3 @@
-// Provides network-related dependencies including OkHttp clients, JSON, and Gemini model configuration.
 package com.example.pantrychef.di
 
 import android.content.Context
@@ -47,6 +46,7 @@ object NetworkModule {
     ): OkHttpClient {
         val cacheDir = File(context.cacheDir, "http_cache")
         val cache = Cache(cacheDir, 5L * 1024 * 1024)
+
         return OkHttpClient.Builder()
             .cache(cache)
             .addInterceptor(OffHeadersInterceptor())
@@ -64,6 +64,7 @@ object NetworkModule {
     ): OkHttpClient {
         val cacheDir = File(context.cacheDir, "http_cache_off")
         val cache = Cache(cacheDir, 3L * 1024 * 1024)
+
         return OkHttpClient.Builder()
             .cache(cache)
             .protocols(listOf(Protocol.HTTP_1_1))
@@ -89,7 +90,9 @@ object NetworkModule {
     @Singleton
     fun provideGenerativeModel(): GenerativeModel =
         GenerativeModel(
-            modelName = "gemini-2.0-flash",
+            modelName = GEMINI_MODEL_NAME,
             apiKey = BuildConfig.GEMINI_API_KEY
         )
+
+    private const val GEMINI_MODEL_NAME = "gemini-3.1-flash-lite-preview"
 }

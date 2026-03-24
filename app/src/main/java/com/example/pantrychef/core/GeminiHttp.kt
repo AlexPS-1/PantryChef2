@@ -1,4 +1,3 @@
-// Wrapper over Google Generative AI SDK to generate recipes and identify pantry items from images.
 package com.example.pantrychef.core
 
 import android.graphics.Bitmap
@@ -13,7 +12,7 @@ class GeminiHttp @Inject constructor() {
 
     private val model by lazy {
         GenerativeModel(
-            modelName = "gemini-2.0-flash",
+            modelName = GEMINI_MODEL_NAME,
             apiKey = BuildConfig.GEMINI_API_KEY
         )
     }
@@ -36,11 +35,13 @@ class GeminiHttp @Inject constructor() {
             .trim()
 
         if (text.isBlank()) return emptyList()
+
         return parsePlainList(text)
     }
 
     private fun parsePlainList(text: String): List<CandidateItem> {
         val out = mutableListOf<CandidateItem>()
+
         text.lines()
             .map { it.trim() }
             .filter { it.isNotBlank() }
@@ -53,7 +54,9 @@ class GeminiHttp @Inject constructor() {
                         .removePrefix("-")
                         .removePrefix("•")
                         .trim()
+
                     val unit = defaultUnitFor(canonical)
+
                     out += CandidateItem(
                         name = canonical,
                         count = count.coerceAtLeast(1),
@@ -63,6 +66,7 @@ class GeminiHttp @Inject constructor() {
                     )
                 }
             }
+
         return out.groupBy { it.name }.map { (_, items) ->
             val maxConf = items.maxBy { it.confidence }
             maxConf.copy(count = items.sumOf { it.count })
@@ -83,6 +87,8 @@ class GeminiHttp @Inject constructor() {
     }
 
     private companion object {
+        const val GEMINI_MODEL_NAME = "gemini-3.1-flash-lite-preview"
+
         val ITEM_LINE = Regex(
             pattern = """^\s*[-•]?\s*([A-Za-z][A-Za-z0-9 \-_/&]*)[^0-9]*[x×]\s*([0-9]{1,3})\s*$"""
         )
