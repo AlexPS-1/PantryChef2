@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+build/
+
+# Local config (API keys, SDK paths)
+local.properties
+
+# IDE (Android Studio / IntelliJ)
+.idea/
+*.iml
+
+# Kotlin / build system
+.kotlin/
+
+# Native builds
+.externalNativeBuild/
+.cxx/
+
+# Generated / captures
+captures/
+
+# OS
+.DS_Store
+
+# Export artifacts
+exportToHTML/

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- 🌙 Main app theme (Compose + Material3 ready) -->
+    <style name="Theme.PantryChef" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Optional: customize later if you want -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- 🚀 Splash screen theme -->
+    <style name="Theme.PantryChef.Splash" parent="Theme.SplashScreen">
+        <!-- Background color behind the logo -->
+        <item name="windowSplashScreenBackground">@color/white</item>
+
+        <!-- The image shown during splash -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+
+        <!-- Optional icon background color -->
+        <item name="windowSplashScreenIconBackgroundColor">@color/white</item>
+
+        <!-- After splash fades out, switch to main theme -->
+        <item name="postSplashScreenTheme">@style/Theme.PantryChef</item>
+    </style>
+
+</resources>
