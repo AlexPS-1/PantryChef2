@@ -5,11 +5,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Button
@@ -26,6 +24,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -45,7 +44,8 @@ fun RecipeResultScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let { message ->
+        val message = uiState.errorMessage
+        if (!message.isNullOrBlank()) {
             snackbarHostState.showSnackbar(message)
             viewModel.clearError()
         }
@@ -111,7 +111,8 @@ fun RecipeResultScreen(
             }
 
             else -> {
-                val recipe = uiState.recipe!!
+                val recipe = uiState.recipe ?: return@Scaffold
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
