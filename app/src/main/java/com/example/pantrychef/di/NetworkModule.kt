@@ -79,20 +79,22 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideKotlinxJson(): Json =
-        Json {
+    fun provideKotlinxJson(): Json {
+        return Json {
             ignoreUnknownKeys = true
             isLenient = true
             explicitNulls = false
         }
+    }
 
     @Provides
     @Singleton
-    fun provideGenerativeModel(): GenerativeModel =
-        GenerativeModel(
+    fun provideGenerativeModel(): GenerativeModel {
+        return GenerativeModel(
             modelName = GEMINI_MODEL_NAME,
             apiKey = BuildConfig.GEMINI_API_KEY
         )
+    }
 
     private const val GEMINI_MODEL_NAME = "gemini-3.1-flash-lite-preview"
 }

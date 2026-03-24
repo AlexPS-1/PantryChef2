@@ -11,15 +11,32 @@ import javax.inject.Singleton
 class GeminiHttp @Inject constructor() {
 
     private val model by lazy {
+        val apiKey = BuildConfig.GEMINI_API_KEY.trim()
+        require(apiKey.isNotBlank()) {
+            "GEMINI_API_KEY is missing. Add it to local.properties."
+        }
+
         GenerativeModel(
             modelName = GEMINI_MODEL_NAME,
-            apiKey = BuildConfig.GEMINI_API_KEY
+            apiKey = apiKey
         )
     }
 
     suspend fun generateRecipe(prompt: String): String {
-        val resp = model.generateContent(prompt)
-        return resp.text.orEmpty()
+        return try {
+            model.generateContent(prompt).text.orEmpty().trim()
+        } catch (t: Throwable) {
+            throw IllegalStateException(
+                buildString {
+                    append("Gemini request failed")
+                    t.message?.takeIf { it.isNotBlank() }?.let {
+                        append(": ")
+                        append(it)
+                    }
+                },
+                t
+            )
+        }
     }
 
     suspend fun identifyItemCounts(images: List<Bitmap>): List<CandidateItem> {
@@ -30,8 +47,9 @@ class GeminiHttp @Inject constructor() {
             text(VISION_PROMPT)
         }
 
-        val text = runCatching { model.generateContent(visionContent).text.orEmpty() }
-            .getOrDefault("")
+        val text = runCatching {
+            model.generateContent(visionContent).text.orEmpty()
+        }.getOrDefault("")
             .trim()
 
         if (text.isBlank()) return emptyList()
@@ -46,25 +64,24 @@ class GeminiHttp @Inject constructor() {
             .map { it.trim() }
             .filter { it.isNotBlank() }
             .forEach { line ->
-                val m = ITEM_LINE.find(line)
-                if (m != null) {
-                    val rawName = m.groupValues[1].trim()
-                    val count = m.groupValues[2].toIntOrNull() ?: 1
-                    val canonical = rawName.lowercase()
-                        .removePrefix("-")
-                        .removePrefix("•")
-                        .trim()
+                val match = ITEM_LINE.find(line) ?: return@forEach
 
-                    val unit = defaultUnitFor(canonical)
+                val rawName = match.groupValues[1].trim()
+                val count = match.groupValues[2].toIntOrNull() ?: 1
+                val canonical = rawName.lowercase()
+                    .removePrefix("-")
+                    .removePrefix("•")
+                    .trim()
 
-                    out += CandidateItem(
-                        name = canonical,
-                        count = count.coerceAtLeast(1),
-                        unit = unit,
-                        confidence = 0.75f,
-                        source = CandidateItem.Source.GEMINI
-                    )
-                }
+                val unit = defaultUnitFor(canonical)
+
+                out += CandidateItem(
+                    name = canonical,
+                    count = count.coerceAtLeast(1),
+                    unit = unit,
+                    confidence = 0.75f,
+                    source = CandidateItem.Source.GEMINI
+                )
             }
 
         return out.groupBy { it.name }.map { (_, items) ->
@@ -73,17 +90,19 @@ class GeminiHttp @Inject constructor() {
         }
     }
 
-    private fun defaultUnitFor(name: String): String = when (name.lowercase()) {
-        "pasta" -> "box"
-        "noodles" -> "pack"
-        "rice" -> "bag"
-        "beans", "tuna" -> "can"
-        "milk" -> "carton"
-        "yogurt" -> "cup"
-        "bread" -> "loaf"
-        "eggs" -> "pcs"
-        "oil" -> "bottle"
-        else -> "pcs"
+    private fun defaultUnitFor(name: String): String {
+        return when (name.lowercase()) {
+            "pasta" -> "box"
+            "noodles" -> "pack"
+            "rice" -> "bag"
+            "beans", "tuna" -> "can"
+            "milk" -> "carton"
+            "yogurt" -> "cup"
+            "bread" -> "loaf"
+            "eggs" -> "pcs"
+            "oil" -> "bottle"
+            else -> "pcs"
+        }
     }
 
     private companion object {
