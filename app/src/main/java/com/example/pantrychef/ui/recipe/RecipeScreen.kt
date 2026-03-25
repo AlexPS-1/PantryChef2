@@ -63,7 +63,11 @@ fun RecipeScreen(
         "Italian Nonna",
         "Science-y Food Nerd",
         "Street-food Storyteller",
-        "Nordic Minimalist"
+        "Nordic Minimalist",
+        "BBQ Pitmaster",
+        "Kitchen Nightmare (Brutally Honest)",
+        "Pirate",
+        "Cute for Kids"
     )
 
     var selectedVoice by remember { mutableStateOf("Playful Classic") }
@@ -150,31 +154,83 @@ fun RecipeScreen(
 
             PreferenceGroup(
                 title = "Meal time",
-                options = listOf("Breakfast", "Lunch", "Dinner", "Snack"),
+                options = listOf(
+                    "Breakfast",
+                    "Brunch",
+                    "Lunch",
+                    "Dinner",
+                    "Snack",
+                    "Dessert",
+                    "Late-night"
+                ),
                 selected = mealTime
             )
 
             PreferenceGroup(
                 title = "Style & speed",
-                options = listOf("Quick", "One-pan", "Comforting", "Fresh", "Meal prep"),
+                options = listOf(
+                    "Quick",
+                    "One-pan",
+                    "Comforting",
+                    "Fresh",
+                    "Meal prep",
+                    "Cozy",
+                    "Budget",
+                    "High-protein",
+                    "Low-effort",
+                    "Fancy-ish",
+                    "Crispy",
+                    "Saucy"
+                ),
                 selected = styleSpeed
             )
 
             PreferenceGroup(
                 title = "Diet",
-                options = listOf("Vegetarian", "High-protein", "Low-carb", "Dairy-free"),
+                options = listOf(
+                    "Vegetarian",
+                    "Vegan",
+                    "High-protein",
+                    "Low-carb",
+                    "Dairy-free",
+                    "Gluten-free",
+                    "Halal-style",
+                    "Kid-friendly"
+                ),
                 selected = diet
             )
 
             PreferenceGroup(
                 title = "Cuisine",
-                options = listOf("Italian", "Mediterranean", "Mexican", "Asian-inspired", "British"),
+                options = listOf(
+                    "Italian",
+                    "Mediterranean",
+                    "Mexican",
+                    "Asian-inspired",
+                    "British",
+                    "American BBQ",
+                    "Nordic",
+                    "Middle Eastern",
+                    "Indian-inspired",
+                    "French bistro"
+                ),
                 selected = cuisine
             )
 
             PreferenceGroup(
                 title = "Mood",
-                options = listOf("Cozy", "Light", "Bold", "Nostalgic", "Fancy-ish"),
+                options = listOf(
+                    "Cozy",
+                    "Light",
+                    "Bold",
+                    "Nostalgic",
+                    "Fancy-ish",
+                    "Chaotic good",
+                    "Wholesome",
+                    "Cheeky",
+                    "Comfort food",
+                    "Fresh and bright"
+                ),
                 selected = mood
             )
 
@@ -186,6 +242,11 @@ fun RecipeScreen(
                     Text(
                         text = "Voice",
                         style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Choose the personality PantryChef uses when writing your recipe.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -216,6 +277,7 @@ fun RecipeScreen(
                         value = mustIncludeText,
                         onValueChange = { mustIncludeText = it },
                         label = { Text("Must include ingredients (comma-separated)") },
+                        placeholder = { Text("e.g. eggs, spinach, cheddar") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
